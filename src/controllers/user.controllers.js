@@ -7,7 +7,7 @@ import jwt, { decode } from "jsonwebtoken"
 import mongoose from "mongoose";
 
 
-const generateAccessAndRefereshTokens = async(userId) =>{
+const generateAccessAndRefreshTokens = async(userId) =>{
     try {
         const user = await User.findById(userId)
         const accessToken = user.generateAccessToken()
@@ -20,7 +20,7 @@ const generateAccessAndRefereshTokens = async(userId) =>{
         return {accessToken, refreshToken}
 
     } catch (error) {
-        throw new ApiError(500, "Something went wrong while generating referesh and access token")
+    throw new ApiError(500, "Something went wrong while generating refresh and access token")
     }
 }
 
@@ -93,7 +93,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registered Successfully")
+        new ApiResponse(201, createdUser, "User registered Successfully")
     )
 
 } )
@@ -133,7 +133,7 @@ const loginUser = asyncHandler(async (req, res) =>{
     throw new ApiError(401, "Invalid user credentials")
     }
 
-   const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
@@ -185,10 +185,10 @@ const logoutUser = asyncHandler(async(req, res) => {
 
 const refreshAccessToken=asyncHandler(async (req,res)=>{
 
-    const incomingRefreshToken = res.cokkies.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if(!incomingRefreshToken){
-        throw new ApiError(401,"Unauthroized request");
+    throw new ApiError(401,"Unauthorized request");
     }
 
     try {
@@ -201,23 +201,23 @@ const refreshAccessToken=asyncHandler(async (req,res)=>{
        const user= await User.findById(decodedToken?._id)
     
        if(!user){
-        throw new ApiError(401,"Tnvalid refresh Token");
+    throw new ApiError(401,"Invalid refresh Token");
        }
     
        if(incomingRefreshToken !== user?.refreshToken){
-        throw new ApiError(401,"Refresh TOken is expired or used");
+    throw new ApiError(401,"Refresh Token is expired or used");
        }
     
        const options={
         httpOnly:true,
         secure:true
        }
-       const {accessToken,newRefreshToken}=await generateAccessAndRefereshTokens(user._id)
+    const {accessToken,newRefreshToken}=await generateAccessAndRefreshTokens(user._id)
     
        return res
        .status(200)
        .cookie("accessToken",accessToken,options)
-       .cokkie("refreshToken",newRefreshToken,options)
+    .cookie("refreshToken",newRefreshToken,options)
        .json(
         new ApiResponse(
             200,
@@ -235,9 +235,9 @@ const changeCurrentPassword=asyncHandler(async(req,res)=>{
     const user= await User.findById(req.user?._id)
    const isPasswordCorrect= await user.isPasswordCorrect(oldPassword)
 
-   if(!isPasswordCorrect){
-    throw new ApiError(400,"Invalid okd password")
-   }
+    if(!isPasswordCorrect){
+     throw new ApiError(400,"Invalid old password")
+    }
 
    user.password=newPassword
    await user.save({validateBeforeSave:false})
@@ -248,7 +248,7 @@ const changeCurrentPassword=asyncHandler(async(req,res)=>{
     new ApiResponse(
         200,
         {},
-        "Password chnaged successfully"))
+    "Password changed successfully"))
 })
 
 const getCurrentUser=asyncHandler(async(req,res)=>{
@@ -261,7 +261,7 @@ const updateAccountDetails=asyncHandler(async(req,res)=>{
     const {fullName,email}=req.body
 
     if(!fullName && !email){
-        throw new ApiError(400,"all fields are required")
+        throw new ApiError(400,"All fields are required")
     }
 
     const user= await User.findByIdAndUpdate(
@@ -275,7 +275,7 @@ const updateAccountDetails=asyncHandler(async(req,res)=>{
         {new:true}
     ).select("-password")
 
-    return res.status(200).json(new ApiResponse(200,user,"Account detailed updated successfully"))
+    return res.status(200).json(new ApiResponse(200,user,"Account details updated successfully"))
 })
 
 const updateAvatar=asyncHandler(async(req,res)=>{
@@ -322,7 +322,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"Error while uploading on coverImage")
     }
 
-    const user=findByIdAndUpdate(
+    const user=await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -336,13 +336,13 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
         new ApiResponse(
             200,
             user,
-            "coverImage successfully updated"
+            "Cover image successfully updated"
         )
     )
 
 })
 
-const getUserChannelProfile=asyncHandler(async(res,req)=>{
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
     const {username}= req.params
     if(!username?.trim()){
         throw new ApiError(400,"Username is missing");
@@ -375,12 +375,11 @@ const getUserChannelProfile=asyncHandler(async(res,req)=>{
                 subscribersCount:{
                     $size:"$subscribers"
                 },
-                channelsSubsccribedToCount:{
-                    $size:"$subcribedTo"
+                channelsSubscribedToCount:{
+                    $size:"$subscribedTo"
                 },
                 isSubscribed:{
                     $cond:{
-                        // $in work with array and objects , $subscribers defines that this is an object  and you can find into it also.
                         if:{$in:[req.user?._id,"$subscribers.subscriber"]},
                         then: true,
                         else:false
@@ -390,11 +389,10 @@ const getUserChannelProfile=asyncHandler(async(res,req)=>{
         },
         {
             $project:{
-                // joh joh chahiye 
-                fullName:1,     // flag->On
+                fullName:1,
                 username:1,
                 subscribersCount:1,
-                channelsSubsccribedToCount:1,
+                channelsSubscribedToCount:1,
                 isSubscribed:1,
                 avatar:1,
                 coverImage:1,

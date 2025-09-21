@@ -40,12 +40,12 @@ const getAllVideos=asyncHandler(async(req,res)=>{
                 videoFile:1,
                 thumbnail:1,
                 title:1,
-                desrciption:1,
+                description:1,
                 duration:1,
                 views:1,
                 isPublished:1,
                 owner:{
-                    $arrayElemAt:["'$videoByOwner",0]
+                    $arrayElemAt:["$videoByOwner",0]
                 }
             }
         },
@@ -68,12 +68,12 @@ const getAllVideos=asyncHandler(async(req,res)=>{
 })
 
 const publishAVideo=asyncHandler(async(req,res)=>{
-    const {title,desrciption,owner,duration}=req.body
+    const {title,description,owner,duration}=req.body
 
     if(!title){
         throw new ApiError(400,"Title should not be empty")
     }
-    if(!desrciption){
+    if(!description){
         throw new ApiError(400,"Description should not be empty")
     }
 
@@ -102,7 +102,7 @@ const publishAVideo=asyncHandler(async(req,res)=>{
         videoFile:videoFile.url,
         thumbnail:thumbnail.url,
         title,
-        desrciption,
+        description,
         owner:req.user._id,
         duration
     })
@@ -129,11 +129,11 @@ const getVideoById=asyncHandler(async(req,res)=>{
 
 const updateVideo=asyncHandler(async(req,res)=>{
     const {videoId}=req.params
-    const {title,desrciption}=req.body
+    const {title,description}=req.body
     if(!isValidObjectId(videoId)){
         throw new ApiError(400,"Invalid video Id")
     }
-    let updateData={title,desrciption};
+    let updateData={title,description};
     if(req.file){
         const thumbnailLocalPath=req.file.path
         if(!thumbnailLocalPath){
@@ -146,6 +146,7 @@ const updateVideo=asyncHandler(async(req,res)=>{
         updateData.thumbnail=thumbnail.url
     }
     const updatedVideo= await Video.findByIdAndUpdate(
+        videoId,
         {$set:updateData},
         {new:true,runValidators:true}
     )
@@ -153,6 +154,7 @@ const updateVideo=asyncHandler(async(req,res)=>{
         throw new ApiError(404,"video not found")
     }
     return res.status(200).json(new ApiResponse(200,updatedVideo,"Videos updated successfully"));
+    return res.status(200).json(new ApiResponse(200,updatedVideo,"Video updated successfully"));
 
 })
 
