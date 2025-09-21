@@ -35,7 +35,7 @@ src/
 
 1. **Clone the repository**
 	```powershell
-	git clone <repo-url>
+	git clone Yashika-code/Youtube_tweet/edit/main/Readme.md
 	cd Youtube_tweet-main
 	```
 
